@@ -166,7 +166,7 @@ static void Open_JTalk_set_audio_buff_size(Open_JTalk * open_jtalk, size_t i)
    HTS_Engine_set_audio_buff_size(&open_jtalk->engine, i);
 }
 
-static int Open_JTalk_synthesis(Open_JTalk * open_jtalk, const char *txt, FILE * wavfp,
+static int run_frontend(Open_JTalk * open_jtalk, const char *txt, FILE * wavfp,
                                 FILE * logfp)
 {
    int result = 0;
@@ -184,27 +184,10 @@ static int Open_JTalk_synthesis(Open_JTalk * open_jtalk, const char *txt, FILE *
    njd_set_long_vowel(&open_jtalk->njd);
    njd2jpcommon(&open_jtalk->jpcommon, &open_jtalk->njd);
    JPCommon_make_label(&open_jtalk->jpcommon);
-   if (JPCommon_get_label_size(&open_jtalk->jpcommon) > 2) {
-      if (HTS_Engine_synthesize_from_strings
-          (&open_jtalk->engine, JPCommon_get_label_feature(&open_jtalk->jpcommon),
-           JPCommon_get_label_size(&open_jtalk->jpcommon)) == TRUE)
-         result = 1;
-      if (wavfp != NULL)
-         HTS_Engine_save_riff(&open_jtalk->engine, wavfp);
-      if (logfp != NULL) {
-         fprintf(logfp, "[Text analysis result]\n");
-         NJD_fprint(&open_jtalk->njd, logfp);
-         fprintf(logfp, "\n[Output label]\n");
-         HTS_Engine_save_label(&open_jtalk->engine, logfp);
-         fprintf(logfp, "\n");
-         HTS_Engine_save_information(&open_jtalk->engine, logfp);
-      }
-      HTS_Engine_refresh(&open_jtalk->engine);
-   }
-   JPCommon_refresh(&open_jtalk->jpcommon);
-   NJD_refresh(&open_jtalk->njd);
-   Mecab_refresh(&open_jtalk->mecab);
-
+   int label_size = JPCommon_get_label_size(&open_jtalk->jpcommon);
+   char** label_feature;
+   label_feature = JPCommon_get_label_feature(&open_jtalk->jpcommon);
+   
    return result;
 }
 
