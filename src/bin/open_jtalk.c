@@ -61,7 +61,7 @@ OPEN_JTALK_C_START;
 #include "mecab.h"
 #include "njd.h"
 #include "jpcommon.h"
-#include "HTS_engine.h"
+
 
 /* Sub headers */
 #include "text2mecab.h"
@@ -80,7 +80,6 @@ typedef struct _Open_JTalk {
    Mecab mecab;
    NJD njd;
    JPCommon jpcommon;
-   HTS_Engine engine;
 } Open_JTalk;
 
 static void Open_JTalk_initialize(Open_JTalk * open_jtalk)
@@ -88,7 +87,6 @@ static void Open_JTalk_initialize(Open_JTalk * open_jtalk)
    Mecab_initialize(&open_jtalk->mecab);
    NJD_initialize(&open_jtalk->njd);
    JPCommon_initialize(&open_jtalk->jpcommon);
-   HTS_Engine_initialize(&open_jtalk->engine);
 }
 
 static void Open_JTalk_clear(Open_JTalk * open_jtalk)
@@ -96,7 +94,6 @@ static void Open_JTalk_clear(Open_JTalk * open_jtalk)
    Mecab_clear(&open_jtalk->mecab);
    NJD_clear(&open_jtalk->njd);
    JPCommon_clear(&open_jtalk->jpcommon);
-   HTS_Engine_clear(&open_jtalk->engine);
 }
 
 static int Open_JTalk_load(Open_JTalk * open_jtalk, char *dn_mecab, char *fn_voice)
@@ -191,74 +188,6 @@ static int run_frontend(Open_JTalk * open_jtalk, const char *txt, FILE * wavfp,
    return result;
 }
 
-static void usage()
-{
-   fprintf(stderr, "The Japanese TTS System \"Open JTalk\"\n");
-   fprintf(stderr, "Version 1.10 (http://open-jtalk.sourceforge.net/)\n");
-   fprintf(stderr, "Copyright (C) 2008-2016 Nagoya Institute of Technology\n");
-   fprintf(stderr, "All rights reserved.\n");
-   fprintf(stderr, "\n");
-   fprintf(stderr, "%s", HTS_COPYRIGHT);
-   fprintf(stderr, "\n");
-   fprintf(stderr, "Yet Another Part-of-Speech and Morphological Analyzer \"Mecab\"\n");
-   fprintf(stderr, "Version 0.996 (http://mecab.sourceforge.net/)\n");
-   fprintf(stderr, "Copyright (C) 2001-2008 Taku Kudo\n");
-   fprintf(stderr, "              2004-2008 Nippon Telegraph and Telephone Corporation\n");
-   fprintf(stderr, "All rights reserved.\n");
-   fprintf(stderr, "\n");
-   fprintf(stderr, "NAIST Japanese Dictionary\n");
-   fprintf(stderr, "Version 0.6.1-20090630 (http://naist-jdic.sourceforge.jp/)\n");
-   fprintf(stderr, "Copyright (C) 2009 Nara Institute of Science and Technology\n");
-   fprintf(stderr, "All rights reserved.\n");
-   fprintf(stderr, "\n");
-   fprintf(stderr, "UniDic\n");
-   fprintf(stderr, "Version 2.2.0 (https://unidic.ninjal.ac.jp/)\n");
-   fprintf(stderr, "Copyright (C) 2011-2017 The UniDic Consortium\n");
-   fprintf(stderr, "All rights reserved.\n");
-   fprintf(stderr, "\n");
-   fprintf(stderr, "open_jtalk - The Japanese TTS system \"Open JTalk\"\n");
-   fprintf(stderr, "\n");
-   fprintf(stderr, "  usage:\n");
-   fprintf(stderr, "       open_jtalk [ options ] [ infile ] \n");
-   fprintf(stderr,
-           "  options:                                                                   [  def][ min-- max]\n");
-   fprintf(stderr,
-           "    -x  dir        : dictionary directory                                    [  N/A]\n");
-   fprintf(stderr,
-           "    -m  htsvoice   : HTS voice files                                         [  N/A]\n");
-   fprintf(stderr,
-           "    -ow s          : filename of output wav audio (generated speech)         [  N/A]\n");
-   fprintf(stderr,
-           "    -ot s          : filename of output trace information                    [  N/A]\n");
-   fprintf(stderr,
-           "    -s  i          : sampling frequency                                      [ auto][   1--    ]\n");
-   fprintf(stderr,
-           "    -p  i          : frame period (point)                                    [ auto][   1--    ]\n");
-   fprintf(stderr,
-           "    -a  f          : all-pass constant                                       [ auto][ 0.0-- 1.0]\n");
-   fprintf(stderr,
-           "    -b  f          : postfiltering coefficient                               [  0.0][ 0.0-- 1.0]\n");
-   fprintf(stderr,
-           "    -r  f          : speech speed rate                                       [  1.0][ 0.0--    ]\n");
-   fprintf(stderr,
-           "    -fm f          : additional half-tone                                    [  0.0][    --    ]\n");
-   fprintf(stderr,
-           "    -u  f          : voiced/unvoiced threshold                               [  0.5][ 0.0-- 1.0]\n");
-   fprintf(stderr,
-           "    -jm f          : weight of GV for spectrum                               [  1.0][ 0.0--    ]\n");
-   fprintf(stderr,
-           "    -jf f          : weight of GV for log F0                                 [  1.0][ 0.0--    ]\n");
-   fprintf(stderr,
-           "    -g  f          : volume (dB)                                             [  0.0][    --    ]\n");
-   fprintf(stderr,
-           "    -z  i          : audio buffer size (if i==0, turn off)                   [    0][   0--    ]\n");
-   fprintf(stderr, "  infile:\n");
-   fprintf(stderr,
-           "    text file                                                                [stdin]\n");
-   fprintf(stderr, "\n");
-
-   exit(0);
-}
 
 int main(int argc, char **argv)
 {
@@ -284,146 +213,8 @@ int main(int argc, char **argv)
    FILE *wavfp = NULL;
    FILE *logfp = NULL;
 
-   /* output usage */
-   if (argc == 1)
-      usage();
-
    /* initialize Open JTalk */
    Open_JTalk_initialize(&open_jtalk);
-
-   /* get dictionary directory */
-   for (i = 0; i < argc; i++) {
-      if (argv[i][0] == '-' && argv[i][1] == 'x')
-         dn_dict = argv[++i];
-      if (argv[i][0] == '-' && argv[i][1] == 'h')
-         usage();
-   }
-   if (dn_dict == NULL) {
-      fprintf(stderr, "Error: Dictionary must be specified.\n");
-      exit(1);
-   }
-
-   /* get HTS voice file name */
-   for (i = 0; i < argc; i++) {
-      if (argv[i][0] == '-' && argv[i][1] == 'm')
-         fn_voice = argv[++i];
-   }
-   if (fn_voice == NULL) {
-      fprintf(stderr, "Error: HTS voice must be specified.\n");
-      exit(1);
-   }
-
-   /* load dictionary and HTS voice */
-   if (Open_JTalk_load(&open_jtalk, dn_dict, fn_voice) != TRUE) {
-      fprintf(stderr, "Error: Dictionary or HTS voice cannot be loaded.\n");
-      Open_JTalk_clear(&open_jtalk);
-      exit(1);
-   }
-
-   /* get options */
-   while (--argc) {
-      if (**++argv == '-') {
-         switch (*(*argv + 1)) {
-         case 'o':
-            switch (*(*argv + 2)) {
-            case 'w':
-               wavfp = fopen(*++argv, "wb");
-               break;
-            case 't':
-               logfp = fopen(*++argv, "wt");
-               break;
-            default:
-               fprintf(stderr, "Error: Invalid option '-o%c'.\n", *(*argv + 2));
-               exit(1);
-            }
-            --argc;
-            break;
-         case 'h':
-            usage();
-            break;
-         case 'x':
-            argv++;             /* dictionary was already loaded */
-            --argc;
-            break;
-         case 'm':
-            argv++;             /* HTS voice was already loaded */
-            --argc;
-            break;
-         case 's':
-            Open_JTalk_set_sampling_frequency(&open_jtalk, (size_t) atoi(*++argv));
-            --argc;
-            break;
-         case 'p':
-            Open_JTalk_set_fperiod(&open_jtalk, (size_t) atoi(*++argv));
-            --argc;
-            break;
-         case 'a':
-            Open_JTalk_set_alpha(&open_jtalk, atof(*++argv));
-            --argc;
-            break;
-         case 'b':
-            Open_JTalk_set_beta(&open_jtalk, atof(*++argv));
-            --argc;
-            break;
-         case 'r':
-            Open_JTalk_set_speed(&open_jtalk, atof(*++argv));
-            --argc;
-            break;
-         case 'f':
-            switch (*(*argv + 2)) {
-            case 'm':
-               Open_JTalk_add_half_tone(&open_jtalk, atof(*++argv));
-               break;
-            default:
-               fprintf(stderr, "Error: Invalid option '-f%c'.\n", *(*argv + 2));
-               exit(1);
-            }
-            --argc;
-            break;
-         case 'u':
-            Open_JTalk_set_msd_threshold(&open_jtalk, 1, atof(*++argv));
-            --argc;
-            break;
-         case 'j':
-            switch (*(*argv + 2)) {
-            case 'm':
-               Open_JTalk_set_gv_weight(&open_jtalk, 0, atof(*++argv));
-               break;
-            case 'f':
-            case 'p':
-               Open_JTalk_set_gv_weight(&open_jtalk, 1, atof(*++argv));
-               break;
-            default:
-               fprintf(stderr, "Error: Invalid option '-j%c'.\n", *(*argv + 2));
-               exit(1);
-            }
-            --argc;
-            break;
-         case 'g':
-            Open_JTalk_set_volume(&open_jtalk, atof(*++argv));
-            --argc;
-            break;
-         case 'z':
-            Open_JTalk_set_audio_buff_size(&open_jtalk, (size_t) atoi(*++argv));
-            --argc;
-            break;
-         default:
-            fprintf(stderr, "Error: Invalid option '-%c'.\n", *(*argv + 1));
-            exit(1);
-         }
-      } else {
-         txtfn = *argv;
-         txtfp = fopen(txtfn, "rt");
-      }
-   }
-
-   /* synthesize */
-   fgets(buff, MAXBUFLEN - 1, txtfp);
-   if (Open_JTalk_synthesis(&open_jtalk, buff, wavfp, logfp) != TRUE) {
-      fprintf(stderr, "Error: waveform cannot be synthesized.\n");
-      Open_JTalk_clear(&open_jtalk);
-      exit(1);
-   }
 
    /* free memory */
    Open_JTalk_clear(&open_jtalk);
